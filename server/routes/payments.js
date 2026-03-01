@@ -35,10 +35,19 @@ router.post('/enroll', protect, async (req, res) => {
         const request = await EnrollmentRequest.create({
             user: req.user._id,
             course: courseId,
-            amount: amount
+            amount: amount,
+            status: 'Approved' // Auto-approve for instant access
         });
 
         const courseObj = await Course.findById(courseId);
+
+        // Auto-enroll the user
+        if (!courseObj.enrolledStudents.includes(req.user._id)) {
+            courseObj.enrolledStudents.push(req.user._id);
+            await courseObj.save();
+            await User.findByIdAndUpdate(req.user._id, { $addToSet: { enrolledCourses: courseObj._id } });
+        }
+
 
         // --- Notifications ---
         const notificationMessage = `Payment request of ₹${amount} received from ${req.user.name} for course ${courseObj?.name || 'Unknown'}. Please verify in portal.`;

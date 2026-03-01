@@ -63,8 +63,13 @@ export default function CourseDetail() {
     const handleUpiPayment = async () => {
         try {
             await API.post('/payments/enroll', { courseId: course._id, amount: course.price });
-            setEnrollmentRequested(true);
-            toast.success('Payment verified! Awaiting Admin activation.');
+            setIsEnrolled(true);
+            toast.success('Payment received! Course unlocked instantly. 🚀');
+            if (course.lectures?.length > 0) {
+                setActiveLecture(course.lectures[0]);
+            }
+            // Update local user context so it persists
+            updateUser({ ...user, enrolledCourses: [...(user.enrolledCourses || []), course._id] });
         } catch (err) {
             toast.error(err.response?.data?.message || 'Payment initiation failed');
         }
