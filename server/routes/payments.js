@@ -52,14 +52,6 @@ router.post('/enroll', protect, async (req, res) => {
         // --- Notifications ---
         const notificationMessage = `Payment request of ₹${amount} received from ${req.user.name} for course ${courseObj?.name || 'Unknown'}. Please verify in portal.`;
 
-        // 1. Laptop Notification
-        notifier.notify({
-            title: 'New Student Enrollment! 🚀',
-            message: notificationMessage,
-            sound: true,
-            wait: false
-        });
-
         // 2. Email Notification
         try {
             await transporter.sendMail({
@@ -67,24 +59,60 @@ router.post('/enroll', protect, async (req, res) => {
                 to: process.env.ADMIN_EMAIL || 'ravi912066@gmail.com',
                 subject: '🔥 Quantioco: New UPI Payment Received!',
                 html: `
-                    <h2>New Student Enrollment Request</h2>
-                    <p><strong>Student:</strong> ${req.user.name} (${req.user.email})</p>
-                    <p><strong>Course:</strong> ${courseObj?.name || courseId}</p>
-                    <p><strong>Amount:</strong> ₹${amount}</p>
-                    <p>Please check your PhonePe/Bank to confirm receipt, then log in to the Quantioco Admin Portal to approve their access.</p>
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                        <h2 style="color: #6366f1;">New Enrollment Request!</h2>
+                        <p>A new student has paid via UPI and requested access.</p>
+                        <ul>
+                            <li><strong>Student Name:</strong> ${req.user.name}</li>
+                            <li><strong>Email:</strong> ${req.user.email}</li>
+                            <li><strong>Course:</strong> ${courseObj?.name || 'Unknown'}</li>
+                            <li><strong>Amount Paid:</strong> ₹${amount}</li>
+                        </ul>
+                        <p>Course access has been granted automatically.</p>
+                        <a href="https://quantioco.io/admin" style="background-color: #6366f1; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">View in Portal</a>
+                    </div>
                 `
             });
-            console.log("Email notification sent to admin");
         } catch (mailErr) {
-            console.log("Skipped sending email (missing/invalid .env credentials):", mailErr.message);
+            console.error('Failed to send email:', mailErr.message);
         }
-        // --- End Notifications ---
 
-        res.status(201).json({ message: 'Enrollment request submitted.', request });
-    } catch (err) {
-        res.status(500).json({ message: err.message });
+        res.status(201).json({ message: 'Enrollment successful. Instantly activated.', request });
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error' });
     }
 });
+
+// Admin Manual Enrollment
+router.post('/enrollments/manual', protect, adminOnly, async (req, res) => {
+    try {
+        const { userId, courseId } = req.body;
+
+        const user = await User.findById(userId);
+        const course = await Course.findById(courseId);
+
+        if (!user || !course) {
+            return res.status(404).json({ message: 'User or Course not found' });
+        }
+
+        if (user.enrolledCourses.includes(courseId)) {
+            return res.status(400).json({ message: 'Student is already enrolled in this course.' });
+        }
+
+        // Enroll User
+        if (!course.enrolledStudents.includes(userId)) {
+            course.enrolledStudents.push(userId);
+            await course.save();
+        }
+        await User.findByIdAndUpdate(userId, { $addToSet: { enrolledCourses: courseId } });
+
+        res.json({ message: 'Student successfully granted access to course' });
+    } catch (err) {
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+
 
 // GET pending enrollments (Admin)
 router.get('/enrollments/pending', protect, adminOnly, async (req, res) => {

@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, Search, MoreVertical, Mail, Phone, Calendar, ArrowUpRight, Filter, Video } from 'lucide-react';
+import { Users, Search, MoreVertical, Mail, Phone, Calendar, ArrowUpRight, Filter, Video, PlusCircle, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import AdminLayout from '../../components/layout/AdminLayout';
 import API from '../../api/axios';
@@ -8,7 +8,11 @@ import API from '../../api/axios';
 export default function Students() {
     const navigate = useNavigate();
     const [students, setStudents] = useState([]);
+    const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [showEnrollModal, setShowEnrollModal] = useState(false);
+    const [selectedStudent, setSelectedStudent] = useState(null);
+    const [selectedCourseId, setSelectedCourseId] = useState('');
 
     const handle1on1Call = async (studentName) => {
         try {
@@ -33,20 +37,35 @@ export default function Students() {
     useEffect(() => {
         const fetchStudents = async () => {
             try {
-                const res = await API.get('/users/students');
-                setStudents(res.data);
-            } catch (err) {
-                // Fallback
-                setStudents([
-                    { name: 'Ravi Yadav', email: 'ravi@example.com', phone: '9876543210', xp: 2900, createdAt: '2024-01-01' },
-                    { name: 'Alex Thompson', email: 'alex@example.com', phone: '9123456780', xp: 1200, createdAt: '2024-02-15' }
+                const [res, coursesRes] = await Promise.all([
+                    API.get('/users/students'),
+                    API.get('/courses')
                 ]);
+                setStudents(res.data);
+                setCourses(coursesRes.data);
+            } catch (err) {
+                toast.error('Failed to load students');
             } finally {
                 setLoading(false);
             }
         };
         fetchStudents();
     }, []);
+
+    const handleManualEnroll = async (e) => {
+        e.preventDefault();
+        try {
+            await API.post('/payments/enrollments/manual', {
+                userId: selectedStudent._id,
+                courseId: selectedCourseId
+            });
+            toast.success(`Student successfully enrolled!`);
+            setShowEnrollModal(false);
+            // Optionally refresh student data here
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to enroll student');
+        }
+    };
 
     return (
         <AdminLayout>
@@ -132,6 +151,13 @@ export default function Students() {
                                             ) : (
                                                 <>
                                                     <button
+                                                        onClick={() => { setSelectedStudent(s); setShowEnrollModal(true); }}
+                                                        className="p-2 bg-green-500/10 text-green-400 hover:bg-green-500 hover:text-white rounded-lg transition-all"
+                                                        title="Enroll in Course"
+                                                    >
+                                                        <PlusCircle className="w-5 h-5" />
+                                                    </button>
+                                                    <button
                                                         onClick={() => handle1on1Call(s.name)}
                                                         className="p-2 bg-primary-500/10 text-primary-400 hover:bg-primary-500 hover:text-white rounded-lg transition-all"
                                                         title="Initiate 1-on-1 Video Call"
@@ -151,6 +177,43 @@ export default function Students() {
                     </table>
                 </div>
             </div>
+
+            {/* Manual Enroll Modal */}
+            {showEnrollModal && selectedStudent && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="glass-card-dark w-full max-w-md p-8"
+                    >
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-bold">Enroll Cadet</h2>
+                            <button onClick={() => setShowEnrollModal(false)} className="p-2 hover:bg-white/10 rounded-full">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <p className="text-gray-400 text-sm mb-6">Select a course to manually enroll <strong className="text-white">{selectedStudent.name}</strong>.</p>
+
+                        <form onSubmit={handleManualEnroll} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Select Course</label>
+                                <select
+                                    required
+                                    className="input-field w-full appearance-none"
+                                    value={selectedCourseId}
+                                    onChange={(e) => setSelectedCourseId(e.target.value)}
+                                >
+                                    <option value="" disabled>-- Choose Course --</option>
+                                    {courses.map(c => (
+                                        <option key={c._id} value={c._id}>{c.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <button type="submit" className="btn-primary w-full mt-4">Grant Access</button>
+                        </form>
+                    </motion.div>
+                </div>
+            )}
         </AdminLayout>
     );
 }
