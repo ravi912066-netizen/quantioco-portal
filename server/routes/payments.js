@@ -95,12 +95,12 @@ router.post('/enrollments/manual', protect, adminOnly, async (req, res) => {
             return res.status(404).json({ message: 'User or Course not found' });
         }
 
-        if (user.enrolledCourses.includes(courseId)) {
+        if (user.enrolledCourses.some(id => id.toString() === courseId)) {
             return res.status(400).json({ message: 'Student is already enrolled in this course.' });
         }
 
         // Enroll User
-        if (!course.enrolledStudents.includes(userId)) {
+        if (!course.enrolledStudents.some(id => id.toString() === userId)) {
             course.enrolledStudents.push(userId);
             await course.save();
         }

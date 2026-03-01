@@ -207,7 +207,7 @@ export default function CourseDetail() {
                     {/* Tabs and Info */}
                     <div className="glass-card p-8">
                         <div className="flex gap-8 border-b border-white/5 mb-8 overflow-x-auto">
-                            {['Overview', 'Lecture Notes', 'Assignments', 'Student Doubts', ...(user?.role === 'admin' ? ['Enrolled Cadets'] : [])].map((tab, i) => (
+                            {['Overview', 'Lecture Notes', 'Assignments', 'Student Doubts', 'Classes', 'Contests', 'Quizzes', ...(user?.role === 'admin' ? ['Enrolled Cadets'] : [])].map((tab, i) => (
                                 <button
                                     key={i}
                                     onClick={() => setActiveTab(tab)}
@@ -276,6 +276,41 @@ export default function CourseDetail() {
                                     <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
                                     <p className="font-bold uppercase tracking-widest text-xs">Be the first to ask a question!</p>
                                     <button onClick={() => setShowDoubtModal(true)} className="btn-secondary mt-4 text-xs">Ask Mentor</button>
+                                </div>
+                            )}
+
+                            {activeTab === 'Classes' && (
+                                <div className="py-8 text-center flex flex-col items-center justify-center">
+                                    <Video className="w-16 h-16 text-primary-500 mb-6 drop-shadow-[0_0_15px_rgba(99,102,241,0.5)]" />
+                                    <h3 className="text-xl font-black text-white uppercase tracking-tighter mb-2">Live Masterclasses</h3>
+                                    <p className="text-gray-400 text-sm max-w-md mb-8">Join interactive sessions hosted by your instructor directly from the Command Center.</p>
+                                    <a href="/live" className="btn-primary animate-pulse flex items-center gap-2">
+                                        <Play className="w-4 h-4" /> Enter Live Arena
+                                    </a>
+                                </div>
+                            )}
+
+                            {activeTab === 'Contests' && (
+                                <div className="py-12 text-center flex flex-col items-center justify-center bg-dark-800 rounded-2xl border border-white/5 relative overflow-hidden group">
+                                    <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-500/10 rounded-full blur-3xl group-hover:bg-yellow-500/20 transition-all duration-700"></div>
+                                    <Award className="w-16 h-16 text-yellow-500 mb-6 relative z-10" />
+                                    <h3 className="text-xl font-black text-white uppercase tracking-tighter mb-2 relative z-10">Combat Contests</h3>
+                                    <p className="text-gray-400 text-sm max-w-md mb-8 relative z-10">Compete globally against other cadets, earn rank points, and climb the leaderboard.</p>
+                                    <a href="/contests" className="bg-yellow-500 hover:bg-yellow-400 text-black px-8 py-3 rounded-xl font-black uppercase tracking-widest text-sm shadow-glow shadow-yellow-500/20 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 relative z-10">
+                                        View Battlegrounds <ChevronRight className="w-4 h-4" />
+                                    </a>
+                                </div>
+                            )}
+
+                            {activeTab === 'Quizzes' && (
+                                <div className="py-12 text-center flex flex-col items-center justify-center bg-dark-800 rounded-2xl border border-white/5 relative overflow-hidden group">
+                                    <div className="absolute top-0 right-0 w-64 h-64 bg-green-500/10 rounded-full blur-3xl group-hover:bg-green-500/20 transition-all duration-700"></div>
+                                    <CheckCircle2 className="w-16 h-16 text-green-500 mb-6 relative z-10" />
+                                    <h3 className="text-xl font-black text-white uppercase tracking-tighter mb-2 relative z-10">Module Quizzes</h3>
+                                    <p className="text-gray-400 text-sm max-w-md mb-8 relative z-10">Test your knowledge with rapid-fire questions and secure bonus XP.</p>
+                                    <button className="bg-green-500 hover:bg-green-400 text-black px-8 py-3 rounded-xl font-black uppercase tracking-widest text-sm shadow-glow shadow-green-500/20 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 relative z-10">
+                                        Start Quiz <Play className="w-4 h-4" />
+                                    </button>
                                 </div>
                             )}
 
