@@ -24,8 +24,7 @@ export default function Register() {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const handleSendOTP = async (e) => {
-        e.preventDefault();
+    const handleSendOTP = async () => {
         setLoading(true);
         try {
             await API.post('/auth/send-otp', { phone: formData.phone });
@@ -39,7 +38,7 @@ export default function Register() {
     };
 
     const handleRegister = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
         setLoading(true);
         try {
             const res = await API.post('/auth/register', formData);
@@ -55,6 +54,15 @@ export default function Register() {
             toast.error(err.response?.data?.message || 'Verification failed');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleInitialSubmit = async (e) => {
+        e.preventDefault();
+        if (formData.role === 'admin') {
+            await handleSendOTP();
+        } else {
+            await handleRegister();
         }
     };
 
@@ -90,7 +98,7 @@ export default function Register() {
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: 20 }}
-                            onSubmit={handleSendOTP}
+                            onSubmit={handleInitialSubmit}
                             className="space-y-5"
                         >
                             <div className="space-y-1">

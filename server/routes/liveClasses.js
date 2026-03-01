@@ -6,12 +6,13 @@ const { protect, adminOnly } = require('../middleware/auth');
 // POST /api/live-classes (Admin creates class)
 router.post('/', protect, adminOnly, async (req, res) => {
     try {
-        const { title } = req.body;
+        const { title, meetLink } = req.body;
         const roomName = `quantioco-live-${Math.random().toString(36).substring(7)}`;
 
         const liveClass = await LiveClass.create({
             title,
             roomName,
+            meetLink: meetLink || '',
             instructor: req.user._id,
         });
 

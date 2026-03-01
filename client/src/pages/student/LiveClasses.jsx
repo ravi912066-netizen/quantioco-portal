@@ -95,14 +95,30 @@ export default function StudentLiveClasses() {
                         </div>
                     </div>
                     <div className="flex-1 bg-black flex">
-                        <div className="flex-1">
-                            <JitsiMeeting
-                                roomName={activeRoom.roomName}
-                                configOverwrite={{ startWithAudioMuted: true, startWithVideoMuted: true }}
-                                interfaceConfigOverwrite={{ DISABLE_JOIN_LEAVE_NOTIFICATIONS: true }}
-                                userInfo={{ displayName: user.name, email: user.email }}
-                                getIFrameRef={(iframeRef) => { iframeRef.style.height = '100%'; }}
-                            />
+                        <div className="flex-1 flex flex-col">
+                            {activeRoom.meetLink ? (
+                                <div className="flex-1 flex flex-col items-center justify-center p-8 bg-dark-900 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900/20 via-dark-900 to-dark-900 m-4 rounded-2xl border border-blue-500/10 shadow-glow shadow-blue-500/5">
+                                    <Video className="w-20 h-20 text-blue-500 mb-6 animate-pulse-slow drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]" />
+                                    <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-2">External Session Active</h3>
+                                    <p className="text-gray-400 text-sm mb-8 text-center max-w-md font-medium leading-relaxed">Your instructor is hosting this session securely via Google Meet. Click below to enter the classroom in a new tab.</p>
+                                    <a
+                                        href={activeRoom.meetLink}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="btn-primary bg-blue-600 hover:bg-blue-500 shadow-blue-500/25 px-8 py-4 text-sm flex items-center justify-center gap-3 w-64 uppercase tracking-widest font-black"
+                                    >
+                                        <Video className="w-5 h-5" /> Join Meet
+                                    </a>
+                                </div>
+                            ) : (
+                                <JitsiMeeting
+                                    roomName={activeRoom.roomName}
+                                    configOverwrite={{ startWithAudioMuted: true, startWithVideoMuted: true }}
+                                    interfaceConfigOverwrite={{ DISABLE_JOIN_LEAVE_NOTIFICATIONS: true }}
+                                    userInfo={{ displayName: user.name, email: user.email }}
+                                    getIFrameRef={(iframeRef) => { iframeRef.style.height = '100%'; }}
+                                />
+                            )}
                         </div>
 
                         {/* Live Materials Panel */}

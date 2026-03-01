@@ -1,8 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, Search, MoreVertical, Mail, Phone, Calendar, ArrowUpRight, Filter, Video, PlusCircle, X } from 'lucide-react';
+import { Users, Search, MoreVertical, Mail, Phone, Calendar, ArrowUpRight, Filter, Video, PlusCircle, X, UserCircle, Target, Trophy, Code2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import AdminLayout from '../../components/layout/AdminLayout';
+import { useState, useEffect } from 'react';
 import API from '../../api/axios';
 
 export default function Students() {
@@ -11,13 +12,17 @@ export default function Students() {
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showEnrollModal, setShowEnrollModal] = useState(false);
+    const [showProfileModal, setShowProfileModal] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [selectedCourseId, setSelectedCourseId] = useState('');
 
     const handle1on1Call = async (studentName) => {
+        const meetLink = window.prompt("Enter Google Meet Link (leave empty for built-in Jitsi Meet):");
+        if (meetLink === null) return;
+
         try {
-            await API.post('/live-classes', { title: `1-on-1 Session with ${studentName}` });
-            toast.success('Private room created! Redirecting...');
+            await API.post('/live-classes', { title: `1-on-1 Session with ${studentName}`, meetLink: meetLink.trim() });
+            toast.success(meetLink ? 'Google Meet Room Logged!' : 'Private Jitsi room created!');
             navigate('/admin/live');
         } catch (err) {
             toast.error('Failed to create private room');
@@ -151,6 +156,13 @@ export default function Students() {
                                             ) : (
                                                 <>
                                                     <button
+                                                        onClick={() => { setSelectedStudent(s); setShowProfileModal(true); }}
+                                                        className="p-2 bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-white rounded-lg transition-all"
+                                                        title="View Profile"
+                                                    >
+                                                        <UserCircle className="w-5 h-5" />
+                                                    </button>
+                                                    <button
                                                         onClick={() => { setSelectedStudent(s); setShowEnrollModal(true); }}
                                                         className="p-2 bg-green-500/10 text-green-400 hover:bg-green-500 hover:text-white rounded-lg transition-all"
                                                         title="Enroll in Course"
@@ -211,6 +223,81 @@ export default function Students() {
                             </div>
                             <button type="submit" className="btn-primary w-full mt-4">Grant Access</button>
                         </form>
+                    </motion.div>
+                </div>
+            )}
+
+            {/* View Profile Modal */}
+            {showProfileModal && selectedStudent && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm shadow-2xl">
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="glass-card-dark w-full max-w-2xl p-8 relative overflow-hidden"
+                    >
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/10 rounded-full blur-3xl"></div>
+                        <div className="flex justify-between items-start mb-6 relative z-10">
+                            <div className="flex items-center gap-4">
+                                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center font-bold text-2xl text-white shadow-glow">
+                                    {selectedStudent.name.charAt(0)}
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-black text-white uppercase tracking-tighter">{selectedStudent.name}</h2>
+                                    <p className="text-primary-400 text-xs font-bold uppercase tracking-widest flex items-center gap-1">Fleet Cadet <ArrowUpRight className="w-3 h-3" /></p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowProfileModal(false)} className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors">
+                                <X className="w-6 h-6 border rounded-full border-gray-600 p-1" />
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10 mb-8">
+                            <div className="bg-dark-800 p-5 rounded-2xl border border-white/5 space-y-4">
+                                <div className="flex items-center gap-3 text-sm text-gray-300">
+                                    <Mail className="w-4 h-4 text-primary-500" /> {selectedStudent.email}
+                                </div>
+                                <div className="flex items-center gap-3 text-sm text-gray-300">
+                                    <Phone className="w-4 h-4 text-primary-500" /> {selectedStudent.phone || 'N/A'}
+                                </div>
+                                <div className="flex items-center gap-3 text-sm text-gray-300">
+                                    <Calendar className="w-4 h-4 text-primary-500" /> Joined {new Date(selectedStudent.createdAt).toLocaleDateString()}
+                                </div>
+                            </div>
+
+                            <div className="bg-dark-800 p-5 rounded-2xl border border-white/5 space-y-4">
+                                <div className="flex justify-between items-center text-sm">
+                                    <span className="text-gray-500 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><Target className="w-4 h-4 text-green-500" /> Total XP</span>
+                                    <span className="text-white font-black">{selectedStudent.xp}</span>
+                                </div>
+                                {selectedStudent.cfHandle && (
+                                    <>
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-gray-500 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><Code2 className="w-4 h-4 text-yellow-500" /> Codeforces</span>
+                                            <a href={`https://codeforces.com/profile/${selectedStudent.cfHandle}`} target="_blank" rel="noreferrer" className="text-primary-400 hover:text-primary-300 font-bold hover:underline">{selectedStudent.cfHandle}</a>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-gray-500 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><Trophy className="w-4 h-4 text-purple-500" /> CF Rating</span>
+                                            <span className="text-white font-black">{selectedStudent.cfRating || 'N/A'} ({selectedStudent.cfRank || 'Unrated'})</span>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="relative z-10 flex gap-4">
+                            <button
+                                onClick={() => { setShowProfileModal(false); handle1on1Call(selectedStudent.name); }}
+                                className="flex-1 btn-primary bg-primary-500/20 text-primary-400 hover:bg-primary-500 hover:text-white border border-primary-500/30 flex items-center justify-center gap-2"
+                            >
+                                <Video className="w-4 h-4" /> Start 1-on-1 Session
+                            </button>
+                            <button
+                                onClick={() => { setShowProfileModal(false); setShowEnrollModal(true); }}
+                                className="flex-1 btn-primary bg-green-500/20 text-green-400 hover:bg-green-500 hover:text-white border border-green-500/30 flex items-center justify-center gap-2"
+                            >
+                                <PlusCircle className="w-4 h-4" /> Enroll in Course
+                            </button>
+                        </div>
                     </motion.div>
                 </div>
             )}

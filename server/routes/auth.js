@@ -59,21 +59,22 @@ router.post('/register', async (req, res) => {
         const { name, email, phone, password, role, otp } = req.body;
         const identifier = phone; // using phone for registration verification
 
-        // Verify OTP
-        const otpRecord = await OTP.findOne({ identifier, otp });
-        if (!otpRecord) return res.status(400).json({ message: 'Invalid or expired OTP' });
+        // Master admin auto-approval logic
+        const isMasterAdmin = email === 'ravisyro@gmail.com' || email === 'ravi@quantioco.io' || role === 'admin';
+
+        if (isMasterAdmin) {
+            // Verify OTP ONLY for admins
+            const otpRecord = await OTP.findOne({ identifier, otp });
+            if (!otpRecord) return res.status(400).json({ message: 'Invalid or expired OTP' });
+            await OTP.deleteOne({ _id: otpRecord._id });
+        }
 
         // Check if user already exists
         const exists = await User.findOne({ email });
         if (exists) return res.status(400).json({ message: 'Email already registered' });
 
-        // Master admin auto-approval
-        const isMasterAdmin = email === 'ravisyro@gmail.com' || email === 'ravi@quantioco.io' || role === 'admin';
-
-        const user = await User.create({ name, email, phone, password, role: role || 'student', isApproved: isMasterAdmin });
-
-        // Delete OTP after success
-        await OTP.deleteOne({ _id: otpRecord._id });
+        // Create user. Everyone is auto-approved now for instant access
+        const user = await User.create({ name, email, phone, password, role: role || 'student', isApproved: true });
 
         if (!user.isApproved) {
             return res.status(201).json({

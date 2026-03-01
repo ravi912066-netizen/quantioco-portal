@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const liveClassSchema = new mongoose.Schema({
     title: { type: String, required: true },
     roomName: { type: String, required: true, unique: true },
+    meetLink: { type: String, default: '' },
     instructor: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     status: { type: String, enum: ['active', 'ended'], default: 'active' },
     attendees: [{
