@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
     User, Mail, Building, Send, Save, Download,
-    Share2, ShieldCheck, Zap, Target, Flame, GraduationCap, Github, Twitter
+    Share2, ShieldCheck, Zap, Target, Flame, GraduationCap, Github, Twitter, Upload
 } from 'lucide-react';
 import StudentLayout from '../../components/layout/StudentLayout';
 import { useAuth } from '../../context/AuthContext';
@@ -30,11 +30,41 @@ export default function StudentProfile() {
         phone: user?.phone || '',
         institution: user?.institution || '',
         cfHandle: user?.cfHandle || '',
+        cfRating: user?.cfRating || 0,
+        cfRank: user?.cfRank || '',
+        cfMaxRating: user?.cfMaxRating || 0,
         discordHandle: user?.discordHandle || '',
         avatar: user?.avatar || ''
     });
 
+    const [syncingCF, setSyncingCF] = useState(false);
     const cardRef = useRef(null);
+
+    const handleSyncCF = async () => {
+        if (!formData.cfHandle) return toast.error('Enter Codeforces handle first');
+        setSyncingCF(true);
+        try {
+            const res = await fetch(`https://codeforces.com/api/user.info?handles=${formData.cfHandle}`);
+            const data = await res.json();
+            if (data.status === 'OK') {
+                const cfUser = data.result[0];
+                setFormData({
+                    ...formData,
+                    cfRating: cfUser.rating || 0,
+                    cfRank: cfUser.rank || 'Unrated',
+                    cfMaxRating: cfUser.maxRating || 0,
+                    avatar: cfUser.titlePhoto || formData.avatar
+                });
+                toast.success('Codeforces Synced! 🚀');
+            } else {
+                toast.error('Codeforces handle not found');
+            }
+        } catch (err) {
+            toast.error('Failed to sync Codeforces');
+        } finally {
+            setSyncingCF(false);
+        }
+    };
 
     const handleSave = async () => {
         setLoading(true);
@@ -62,6 +92,21 @@ export default function StudentProfile() {
         toast.success('Elite Card Downloaded! 🎴');
     };
 
+    const handleFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 2 * 1024 * 1024) {
+                toast.error("Image must be less than 2MB");
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setFormData({ ...formData, avatar: reader.result });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     return (
         <StudentLayout>
             <div className="flex flex-col lg:flex-row gap-12 items-start mb-20">
@@ -75,7 +120,7 @@ export default function StudentProfile() {
                     <div className="glass-card p-10 space-y-8">
                         <div className="space-y-4 mb-6">
                             <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest flex items-center gap-1.5"><User className="w-3 h-3" /> Select Profile Avatar</label>
-                            <div className="flex flex-wrap gap-4">
+                            <div className="flex flex-wrap gap-4 items-center">
                                 {PRESET_AVATARS.map((avatarUrl, idx) => (
                                     <button
                                         key={idx}
@@ -87,6 +132,10 @@ export default function StudentProfile() {
                                         </div>
                                     </button>
                                 ))}
+                                <label className="w-16 h-16 rounded-2xl p-1 border border-white/10 opacity-50 hover:opacity-100 hover:border-primary-500 flex items-center justify-center cursor-pointer overflow-hidden transition-all text-gray-500 hover:text-primary-400 bg-dark-800">
+                                    <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+                                    <Upload className="w-6 h-6" />
+                                </label>
                             </div>
                         </div>
 
@@ -104,7 +153,12 @@ export default function StudentProfile() {
                                 <input className="input-field py-3.5 text-sm" placeholder="e.g. Stanford University" value={formData.institution} onChange={(e) => setFormData({ ...formData, institution: e.target.value })} />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest flex items-center gap-1.5"><ShieldCheck className="w-3 h-3" /> Codeforces Handle</label>
+                                <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest flex items-center justify-between">
+                                    <span className="flex items-center gap-1.5"><ShieldCheck className="w-3 h-3" /> Codeforces Handle</span>
+                                    <button onClick={handleSyncCF} disabled={syncingCF} className="text-primary-400 hover:text-primary-300">
+                                        {syncingCF ? 'Syncing...' : 'Sync Now 🔄'}
+                                    </button>
+                                </label>
                                 <input className="input-field py-3.5 text-sm" placeholder="e.g. tourister" value={formData.cfHandle} onChange={(e) => setFormData({ ...formData, cfHandle: e.target.value })} />
                             </div>
                             <div className="space-y-2">
@@ -191,9 +245,10 @@ export default function StudentProfile() {
                                 <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
                                     <div className="flex items-center gap-2 text-primary-400 mb-1">
                                         <Target className="w-4 h-4" />
-                                        <span className="text-[9px] font-black uppercase">Solved Items</span>
+                                        <span className="text-[9px] font-black uppercase">CF Rating</span>
                                     </div>
-                                    <p className="text-xl font-black text-white">{user?.problemsSolved || 156}</p>
+                                    <p className="text-xl font-black text-white">{user?.cfRating || 0}</p>
+                                    <p className="text-[8px] font-black uppercase tracking-widest text-primary-500/80 mt-1">{user?.cfRank || 'Unrated'}</p>
                                 </div>
                                 <div className="col-span-2 bg-white/5 rounded-2xl p-4 border border-white/5 flex items-center justify-between">
                                     <div className="flex items-center gap-3">

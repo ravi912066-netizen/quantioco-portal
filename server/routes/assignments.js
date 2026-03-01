@@ -37,6 +37,14 @@ router.delete('/:id', protect, adminOnly, async (req, res) => {
     } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
+// PUT record attempt (student)
+router.put('/:id/attempt', protect, async (req, res) => {
+    try {
+        await Assignment.findByIdAndUpdate(req.params.id, { $addToSet: { attempting: req.user._id } });
+        res.json({ message: 'Attempt recorded' });
+    } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
 // POST submit assignment (student)
 router.post('/:id/submit', protect, async (req, res) => {
     try {

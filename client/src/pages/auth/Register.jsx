@@ -43,9 +43,14 @@ export default function Register() {
         setLoading(true);
         try {
             const res = await API.post('/auth/register', formData);
-            login(res.data.user, res.data.token);
-            toast.success('Full verification successful! Welcome to Quantioco.');
-            navigate(res.data.user.role === 'admin' ? '/admin' : '/dashboard');
+            if (res.data.pendingApproval) {
+                toast.success(res.data.message);
+                navigate('/login');
+            } else {
+                login(res.data.user, res.data.token);
+                toast.success('Full verification successful! Welcome to Quantioco.');
+                navigate(res.data.user.role === 'admin' ? '/admin' : '/dashboard');
+            }
         } catch (err) {
             toast.error(err.response?.data?.message || 'Verification failed');
         } finally {

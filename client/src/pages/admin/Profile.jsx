@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, Mail, Shield, Save, Key, Camera, Layout } from 'lucide-react';
+import { User, Mail, Shield, Save, Key, Camera, Layout, Upload } from 'lucide-react';
 import AdminLayout from '../../components/layout/AdminLayout';
 import { useAuth } from '../../context/AuthContext';
 import API from '../../api/axios';
@@ -36,6 +36,21 @@ export default function AdminProfile() {
         }
     };
 
+    const handleFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 2 * 1024 * 1024) {
+                toast.error("Image must be less than 2MB");
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setFormData({ ...formData, avatar: reader.result });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     return (
         <AdminLayout>
             <div className="mb-10 flex justify-between items-end">
@@ -55,7 +70,7 @@ export default function AdminProfile() {
 
                         <div className="space-y-4 mb-6">
                             <label className="text-[10px] font-black uppercase text-gray-600 tracking-widest flex items-center gap-1.5"><Camera className="w-3 h-3" /> Select Profile Photo</label>
-                            <div className="flex flex-wrap gap-4">
+                            <div className="flex flex-wrap gap-4 items-center">
                                 {PRESET_AVATARS.map((avatarUrl, idx) => (
                                     <button
                                         key={idx}
@@ -67,6 +82,10 @@ export default function AdminProfile() {
                                         </div>
                                     </button>
                                 ))}
+                                <label className="w-16 h-16 rounded-2xl p-1 border border-white/10 opacity-50 hover:opacity-100 hover:border-primary-500 flex items-center justify-center cursor-pointer overflow-hidden transition-all text-gray-500 hover:text-primary-400 bg-dark-800">
+                                    <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+                                    <Upload className="w-6 h-6" />
+                                </label>
                             </div>
                         </div>
 

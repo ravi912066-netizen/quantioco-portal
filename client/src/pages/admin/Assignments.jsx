@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, ClipboardList, Send, Clock, X, Terminal, ExternalLink, Award } from 'lucide-react';
+import { Plus, Search, ClipboardList, Send, Clock, X, Terminal, ExternalLink, Award, Upload, Edit2, Trash2, Users } from 'lucide-react';
 import AdminLayout from '../../components/layout/AdminLayout';
 import API from '../../api/axios';
 import { toast } from 'react-hot-toast';
@@ -37,12 +37,31 @@ export default function AdminAssignments() {
         try {
             await API.post('/assignments', form);
             toast.success('Assignment published!');
-            setShowModal(false);
+            setForm({ title: '', course: 'DSA', description: '', problemUrl: '', docUrl: '', xpReward: 20, deadline: '' });
+            // re-fetch logic for simplicity
+            const aRes = await API.get('/assignments');
+            setAssignments(aRes.data);
             setActiveTab('tasks');
         } catch (err) {
             toast.error('Failed to create assignment');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 5 * 1024 * 1024) {
+                toast.error("Document must be less than 5MB");
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setForm({ ...form, docUrl: reader.result });
+                toast.success("Document attached successfully!");
+            };
+            reader.readAsDataURL(file);
         }
     };
 
@@ -98,8 +117,14 @@ export default function AdminAssignments() {
                                         <input value={form.problemUrl} onChange={(e) => setForm({ ...form, problemUrl: e.target.value })} className="input-field py-2.5 text-sm" placeholder="LeetCode/CF URL" />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Resource Doc Link</label>
-                                        <input value={form.docUrl} onChange={(e) => setForm({ ...form, docUrl: e.target.value })} className="input-field py-2.5 text-sm" placeholder="Google Docs / Notion" />
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 flex justify-between">
+                                            Resource Doc / Sheet URL
+                                            <label className="cursor-pointer text-primary-400 hover:text-primary-300 flex items-center gap-1 lowercase">
+                                                <Upload className="w-3 h-3" /> upload file
+                                                <input type="file" className="hidden" onChange={handleFileUpload} accept=".pdf,.doc,.docx,image/*" />
+                                            </label>
+                                        </label>
+                                        <input value={form.docUrl && form.docUrl.startsWith('data:') ? 'Attached Document (Base64 encoded)' : form.docUrl} onChange={(e) => setForm({ ...form, docUrl: e.target.value })} className="input-field py-2.5 text-sm" placeholder="URL or Upload File ->" />
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
@@ -138,6 +163,10 @@ export default function AdminAssignments() {
                                                 <span className="text-gray-600">•</span>
                                                 <span className="text-[10px] font-bold text-yellow-500 uppercase tracking-tighter flex items-center gap-1">
                                                     <Award className="w-3 h-3" /> {a.xpReward} XP REWARD
+                                                </span>
+                                                <span className="text-gray-600">•</span>
+                                                <span className="text-[10px] font-bold text-blue-400 uppercase tracking-tighter flex items-center gap-1 pl-2 border-l border-white/10">
+                                                    <Users className="w-3 h-3" /> {a.attempting?.length || 0} ATTEMPTING
                                                 </span>
                                             </div>
                                             <h3 className="font-bold text-lg text-white group-hover:text-primary-300 transition-colors">{a.title}</h3>

@@ -1,53 +1,74 @@
 const express = require('express');
 const router = express.Router();
-const Razorpay = require('razorpay');
-const crypto = require('crypto');
+const EnrollmentRequest = require('../models/EnrollmentRequest');
 const Course = require('../models/Course');
 const User = require('../models/User');
-const { protect } = require('../middleware/auth');
+const { protect, adminOnly } = require('../middleware/auth');
 
-const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
-
-// POST create order
-router.post('/create-order', protect, async (req, res) => {
+// POST create enrollment request (from student clicking UPI I Have Paid)
+router.post('/enroll', protect, async (req, res) => {
     try {
-        const { courseId } = req.body;
-        const course = await Course.findById(courseId);
-        if (!course) return res.status(404).json({ message: 'Course not found' });
+        const { courseId, amount } = req.body;
 
-        const options = {
-            amount: course.price * 100, // paise
-            currency: 'INR',
-            receipt: `receipt_${Date.now()}`,
-        };
-        const order = await razorpay.orders.create(options);
-        res.json({ order, course: { name: course.name, price: course.price } });
+        // Ensure not already enrolled
+        const user = await User.findById(req.user._id);
+        if (user.enrolledCourses.includes(courseId)) {
+            return res.status(400).json({ message: 'Already enrolled in this course.' });
+        }
+
+        // Check if request already exists
+        const existing = await EnrollmentRequest.findOne({ user: req.user._id, course: courseId, status: 'Pending' });
+        if (existing) {
+            return res.status(400).json({ message: 'Enrollment request already pending for this course.' });
+        }
+
+        const request = await EnrollmentRequest.create({
+            user: req.user._id,
+            course: courseId,
+            amount: amount
+        });
+
+        res.status(201).json({ message: 'Enrollment request submitted.', request });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
 });
 
-// POST verify payment
-router.post('/verify', protect, async (req, res) => {
+// GET pending enrollments (Admin)
+router.get('/enrollments/pending', protect, adminOnly, async (req, res) => {
     try {
-        const { razorpay_order_id, razorpay_payment_id, razorpay_signature, courseId } = req.body;
-        const sign = razorpay_order_id + '|' + razorpay_payment_id;
-        const expectedSig = crypto
-            .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-            .update(sign)
-            .digest('hex');
+        const requests = await EnrollmentRequest.find({ status: 'Pending' })
+            .populate('user', 'name email')
+            .populate('course', 'name price')
+            .sort({ createdAt: -1 });
+        res.json(requests);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
 
-        if (expectedSig !== razorpay_signature)
-            return res.status(400).json({ message: 'Payment verification failed' });
+// POST approve/reject enrollment (Admin)
+router.post('/enrollments/:id/:action', protect, adminOnly, async (req, res) => {
+    try {
+        const { id, action } = req.params;
+        const request = await EnrollmentRequest.findById(id);
 
-        // Enroll student
-        await Course.findByIdAndUpdate(courseId, { $addToSet: { enrolledStudents: req.user._id } });
-        await User.findByIdAndUpdate(req.user._id, { $addToSet: { enrolledCourses: courseId } });
+        if (!request) return res.status(404).json({ message: 'Request not found' });
 
-        res.json({ message: 'Payment verified and course unlocked!' });
+        if (action === 'approve') {
+            request.status = 'Approved';
+            // Add student to course
+            await Course.findByIdAndUpdate(request.course, { $addToSet: { enrolledStudents: request.user } });
+            // Add course to student
+            await User.findByIdAndUpdate(request.user, { $addToSet: { enrolledCourses: request.course } });
+        } else if (action === 'reject') {
+            request.status = 'Rejected';
+        } else {
+            return res.status(400).json({ message: 'Invalid action' });
+        }
+
+        await request.save();
+        res.json({ message: `Request successfully ${action}d.` });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

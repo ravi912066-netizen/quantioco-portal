@@ -6,6 +6,12 @@ const User = require('../models/User');
 const generateToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
 const OTP = require('../models/OTP');
+const twilio = require('twilio');
+
+// Initialize Twilio client if env vars exist
+const twilioClient = (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN)
+    ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
+    : null;
 
 // POST /api/auth/send-otp (For Registration)
 router.post('/send-otp', async (req, res) => {
@@ -21,12 +27,27 @@ router.post('/send-otp', async (req, res) => {
             { upsert: true, new: true }
         );
 
-        // MOCK: Log OTP for development
+        if (twilioClient && process.env.TWILIO_PHONE_NUMBER) {
+            try {
+                await twilioClient.messages.create({
+                    body: `Your Quantioco.io verification code is: ${otpValue}`,
+                    from: process.env.TWILIO_PHONE_NUMBER,
+                    to: phone.startsWith('+') ? phone : `+91${phone}` // Assuming India default if no country code
+                });
+                console.log(`[AUTH] Real SMS OTP sent to ${phone}`);
+                return res.status(200).json({ message: 'OTP sent to your mobile via SMS!' });
+            } catch (twilioErr) {
+                console.error('[AUTH] Twilio Error:', twilioErr);
+                // Fallback to console if Twilio fails
+            }
+        }
+
+        // MOCK / FALLBACK: Log OTP for development
         console.log(`\n-----------------------------------`);
-        console.log(`[AUTH] OTP for ${identifier}: ${otpValue}`);
+        console.log(`[AUTH] MOCK OTP for ${identifier}: ${otpValue}`);
         console.log(`-----------------------------------\n`);
 
-        res.status(200).json({ message: 'OTP sent successfully (Check server logs)' });
+        res.status(200).json({ message: 'OTP generated (Check server logs - add Twilio keys for real SMS)' });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

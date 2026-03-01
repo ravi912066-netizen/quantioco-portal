@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Course = require('../models/Course');
+const User = require('../models/User');
 const { protect, adminOnly } = require('../middleware/auth');
 
 // GET all courses
@@ -63,6 +64,7 @@ router.post('/:id/enroll', protect, async (req, res) => {
         if (!course.enrolledStudents.includes(req.user._id)) {
             course.enrolledStudents.push(req.user._id);
             await course.save();
+            await User.findByIdAndUpdate(req.user._id, { $addToSet: { enrolledCourses: course._id } });
         }
         res.json({ message: 'Enrolled successfully' });
     } catch (err) { res.status(500).json({ message: err.message }); }

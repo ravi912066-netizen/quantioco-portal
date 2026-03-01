@@ -13,6 +13,7 @@ export default function StudentAssignments() {
     const [activeTask, setActiveTask] = useState(null);
     const [code, setCode] = useState('');
     const [link, setLink] = useState('');
+    const [file, setFile] = useState(null);
     const [loading, setLoading] = useState(false);
     const [submittedTasks, setSubmittedTasks] = useState([]);
 
@@ -23,7 +24,10 @@ export default function StudentAssignments() {
                 API.get('/assignments/submissions/me')
             ]);
             setTasks(res.data);
-            if (res.data.length > 0) setActiveTask(res.data[0]);
+            setTasks(res.data);
+            if (res.data.length > 0) {
+                handleTaskSelect(res.data[0]);
+            }
             setSubmittedTasks(subRes.data.map(s => s.assignment?._id));
         } catch (err) {
             // Handle
@@ -32,13 +36,41 @@ export default function StudentAssignments() {
 
     useEffect(() => { fetchData(); }, []);
 
+    const handleTaskSelect = async (task) => {
+        setActiveTask(task);
+        try {
+            await API.put(`/assignments/${task._id}/attempt`);
+        } catch (err) {
+            // Ignore if already attempting
+        }
+    };
+
+    const handleFileUpload = (e) => {
+        const f = e.target.files[0];
+        if (f) {
+            if (f.size > 5 * 1024 * 1024) {
+                toast.error("File must be less than 5MB");
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setFile(reader.result);
+                toast.success("File attached successfully!");
+            };
+            reader.readAsDataURL(f);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!code) return toast.error('Please paste your code solution');
+        if (!code && !link && !file) return toast.error('Please provide a solution (Code, Link, or File)');
         setLoading(true);
         try {
-            await API.post(`/assignments/${activeTask._id}/submit`, { code, solutionLink: link });
+            await API.post(`/assignments/${activeTask._id}/submit`, { code, solutionLink: link, solutionFile: file });
             toast.success('Assignment submitted! XP awarded.');
+            setCode('');
+            setLink('');
+            setFile(null);
             fetchData();
         } catch (err) {
             toast.error(err.response?.data?.message || 'Submission failed');
@@ -74,7 +106,7 @@ export default function StudentAssignments() {
                         return (
                             <button
                                 key={task._id}
-                                onClick={() => setActiveTask(task)}
+                                onClick={() => handleTaskSelect(task)}
                                 className={`w-full text-left glass-card p-5 group flex items-start gap-4 transition-all duration-300 ${activeTask?._id === task._id ? 'border-primary-500/50 shadow-glow shadow-primary-500/10' : 'hover:border-white/10'}`}
                             >
                                 <div className={`mt-1 p-2.5 rounded-xl border shrink-0 transition-colors ${done ? 'bg-green-500/10 border-green-500/20 text-green-500' : activeTask?._id === task._id ? 'bg-primary-500 text-white' : 'bg-white/5 border-white/5 text-gray-500 group-hover:text-primary-400'}`}>
@@ -177,6 +209,17 @@ export default function StudentAssignments() {
                                             className="input-field py-4"
                                             placeholder="e.g. GitHub URL, Netlify preview, or CodeSandbox link"
                                         />
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <label className="block text-xs font-black uppercase tracking-widest text-gray-500">File Attachment (Optional)</label>
+                                        <input
+                                            disabled={isSubmitted}
+                                            type="file"
+                                            onChange={handleFileUpload}
+                                            className="input-field py-3 text-sm"
+                                        />
+                                        {file && <span className="text-xs text-green-400 font-bold ml-2">File Ready</span>}
                                     </div>
 
                                     <button
