@@ -56,6 +56,32 @@ router.post('/:id/lectures', protect, adminOnly, async (req, res) => {
     } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
+// PUT update lecture (admin)
+router.put('/:id/lectures/:lectureId', protect, adminOnly, async (req, res) => {
+    try {
+        const course = await Course.findById(req.params.id);
+        if (!course) return res.status(404).json({ message: 'Course not found' });
+        const lecture = course.lectures.id(req.params.lectureId);
+        if (!lecture) return res.status(404).json({ message: 'Lecture not found' });
+
+        Object.assign(lecture, req.body);
+        await course.save();
+        res.json(course);
+    } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+// DELETE lecture (admin)
+router.delete('/:id/lectures/:lectureId', protect, adminOnly, async (req, res) => {
+    try {
+        const course = await Course.findById(req.params.id);
+        if (!course) return res.status(404).json({ message: 'Course not found' });
+
+        course.lectures = course.lectures.filter(l => l._id.toString() !== req.params.lectureId);
+        await course.save();
+        res.json(course);
+    } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
 // POST enroll student
 router.post('/:id/enroll', protect, async (req, res) => {
     try {

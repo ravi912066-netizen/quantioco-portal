@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const assignmentSchema = new mongoose.Schema({
     course: { type: String, required: true },
+    lectureId: { type: String, default: null },
     title: { type: String, required: true },
     description: { type: String, default: '' },
     problemUrl: { type: String, default: '' },
