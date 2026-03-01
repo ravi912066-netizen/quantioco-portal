@@ -73,8 +73,8 @@ router.post('/register', async (req, res) => {
         const exists = await User.findOne({ email });
         if (exists) return res.status(400).json({ message: 'Email already registered' });
 
-        // Create user. Everyone is auto-approved now for instant access
-        const user = await User.create({ name, email, phone, password, role: role || 'student', isApproved: true });
+        // Create user. Students are pending admin approval by default
+        const user = await User.create({ name, email, phone, password, role: role || 'student', isApproved: isMasterAdmin });
 
         if (!user.isApproved) {
             return res.status(201).json({

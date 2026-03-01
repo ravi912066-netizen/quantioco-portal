@@ -21,6 +21,8 @@ export default function CourseDetail() {
     const [isEnrolled, setIsEnrolled] = useState(false);
     const [enrollmentRequested, setEnrollmentRequested] = useState(false);
     const [activeTab, setActiveTab] = useState('Overview');
+    const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+    const [assignmentForm, setAssignmentForm] = useState({ title: '', description: '', xpReward: 20, deadline: '', problemUrl: '' });
     const { user, updateUser } = useAuth();
 
     useEffect(() => {
@@ -59,6 +61,21 @@ export default function CourseDetail() {
             setDoubtText('');
         } catch (err) {
             toast.error('Failed to submit doubt');
+        }
+    };
+
+    const handleCreateAssignment = async (e) => {
+        e.preventDefault();
+        try {
+            const payload = { ...assignmentForm, course: course._id }; // backend might prefer this, or course.name. The assignment schema takes string
+            // Actually Assignments.jsx sends full course name or ID. Let's send course.name for better UI.
+            const res = await API.post('/assignments', { ...assignmentForm, course: course.name });
+            setAssignments([res.data, ...assignments]);
+            toast.success('Assignment created successfully!');
+            setShowAssignmentModal(false);
+            setAssignmentForm({ title: '', description: '', xpReward: 20, deadline: '', problemUrl: '' });
+        } catch (err) {
+            toast.error('Failed to create assignment');
         }
     };
 
@@ -242,6 +259,13 @@ export default function CourseDetail() {
 
                             {activeTab === 'Assignments' && (
                                 <div className="space-y-4">
+                                    {user?.role === 'admin' && (
+                                        <div className="flex justify-end mb-4">
+                                            <button onClick={() => setShowAssignmentModal(true)} className="btn-primary flex items-center gap-2 text-xs py-2 px-4 shadow-glow shadow-primary-500/20">
+                                                <Plus className="w-4 h-4" /> Add Assignment
+                                            </button>
+                                        </div>
+                                    )}
                                     {assignments.length > 0 ? assignments.map(a => (
                                         <div key={a._id} className="p-4 glass-card bg-white/5 border border-white/5 rounded-2xl flex justify-between items-center group">
                                             <div className="flex items-center gap-4">
